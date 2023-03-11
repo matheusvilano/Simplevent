@@ -5,7 +5,6 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
 		author="Matheus Vilano",
-		author_email="mattvilano+pip@gmail.com",
 		classifiers=[
 			"Development Status :: 5 - Production/Stable",
 			"Intended Audience :: Developers",
@@ -13,13 +12,13 @@ setuptools.setup(
 			"Operating System :: OS Independent",
 			"Programming Language :: Python :: 3",
 		],
-		description="A simple framework for event-driven programming.",
+		description="A simple framework for event-driven programming. Loosely based on the Observer design pattern.",
 		install_requires=[],
-		keywords="observer listener event design pattern callback",
+		keywords="event observer listener subscription subscriber subject design pattern callback",
 		license="MIT",
 		long_description=long_description,
 		long_description_content_type="events",
-		name="simplevent",
+		name="Simplevent",
 		packages=setuptools.find_packages(where="src"),
 		package_dir={"": "src"},
 		project_urls={
@@ -27,6 +26,6 @@ setuptools.setup(
 			"Git Repository": "https://github.com/matheusvilano/simplevent",
 		},
 		python_requires=">=3.6",
-		url="package URL",
+		url="https://github.com/matheusvilano/simplevent.git",
 		version="1.0.0",
 )

@@ -101,53 +101,12 @@ class Event(ABC):
 		self._subs = list(OrderedDict.fromkeys(self._subs))
 
 
-class SignedEvent(Event):
-	"""An event with functions (or functors) as subscribers. The expectation is that the subscribed (signed) function will always be called successfully."""
-
-	def __init__(self, *, amount_of_params: int = None, return_from_subscribers: bool = False, allow_duplicate_subscribers: bool = False):
-		"""
-		Constructs a new SignedEvent.
-		:param return_from_subscribers: Whether to forward return values from subscribers.
-		:param allow_duplicate_subscribers: Whether to allow duplicate subscribers.
-		"""
-		super().__init__(allow_duplicate_subscribers=allow_duplicate_subscribers)
-		self._len_params: int | None = amount_of_params
-		self._return_from_subs: bool = return_from_subscribers
-
-	def __call__(self, *args, **kwargs) -> None | list:
-		"""
-		Calls every single current subscriber, if valid.
-		:param args: Unnamed arguments.
-		:param kwargs: Named arguments.
-		:return: No return value, by default.
-		"""
-		if self._len_params is not None and self._len_params != len(args):
-			raise IncorrectNumberOfArgsError
-		return_values: list = []
-		for subscriber in self._subs:
-			if subscriber is not None:
-				return_values.append(subscriber(*args, **kwargs))
-		return return_values if self._return_from_subs else None
-
-	def _validate_subscriber(self, subscriber):
-		"""
-		Validates whether the subscriber is valid.
-		:param subscriber: The subscriber to evaluate.
-		:raise: A BaseEventError, if the subscriber is invalid.
-		"""
-		subscriber_signature = inspect.signature(subscriber)
-		if self._len_params is not None and self._len_params != len(subscriber_signature.parameters):
-			raise IncorrectNumberOfParamsError
-		if not isinstance(subscriber, Callable):
-			raise NotCallableError
-
-
-class NamedEvent(Event):
-	"""An event with non-function objects as subscribers, that stores its name as a string. Once invoked, a NamedEvent will query its subscribers for a method of the same name as itself; if valid, the method is immediately called."""
+class StrEvent(Event):
+	"""An event with non-function objects as subscribers, that stores its name as a string. Once invoked, an StrEvent will query its subscribers for a method of the same name as itself; if valid, the method is immediately called."""
 
 	def __init__(self, event_name: str, *, allow_duplicate_subscribers: bool = False):
 		"""
-		Constructs a new SignedEvent.
+		Constructs a new StrEvent.
 		:param event_name: The name of the event. This is also the name of the callback function to look for in the event's subscribers.
 		:param allow_duplicate_subscribers: Whether to allow duplicate subscribers.
 		"""
@@ -183,6 +142,47 @@ class NamedEvent(Event):
 		:return:The name of this event.
 		"""
 		return self._name
+
+
+class RefEvent(Event):
+	"""An event with functions (or functors) as subscribers. The expectation is that the subscribed (signed) function will always be called successfully."""
+
+	def __init__(self, *, amount_of_params: int = None, return_from_subscribers: bool = False, allow_duplicate_subscribers: bool = False):
+		"""
+		Constructs a new RefEvent.
+		:param return_from_subscribers: Whether to forward return values from subscribers.
+		:param allow_duplicate_subscribers: Whether to allow duplicate subscribers.
+		"""
+		super().__init__(allow_duplicate_subscribers=allow_duplicate_subscribers)
+		self._len_params: int | None = amount_of_params
+		self._return_from_subs: bool = return_from_subscribers
+
+	def __call__(self, *args, **kwargs) -> None | list:
+		"""
+		Calls every single current subscriber, if valid.
+		:param args: Unnamed arguments.
+		:param kwargs: Named arguments.
+		:return: No return value, by default.
+		"""
+		if self._len_params is not None and self._len_params != len(args):
+			raise IncorrectNumberOfArgsError
+		return_values: list = []
+		for subscriber in self._subs:
+			if subscriber is not None:
+				return_values.append(subscriber(*args, **kwargs))
+		return return_values if self._return_from_subs else None
+
+	def _validate_subscriber(self, subscriber):
+		"""
+		Validates whether the subscriber is valid.
+		:param subscriber: The subscriber to evaluate.
+		:raise: A BaseEventError, if the subscriber is invalid.
+		"""
+		subscriber_signature = inspect.signature(subscriber)
+		if self._len_params is not None and self._len_params != len(subscriber_signature.parameters):
+			raise IncorrectNumberOfParamsError
+		if not isinstance(subscriber, Callable):
+			raise NotCallableError
 
 
 class BaseEventError(BaseException):
