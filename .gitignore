@@ -1,0 +1,26 @@
+# Simplevent
+# Matheus Vilano
+
+# Distribution / Packaging
+.installed.cfg
+bin/
+build/
+dist/
+lib/
+lib64/
+sdist/
+var/
+
+# Compiled Objects
+**/*.pyc
+**/*.pyo
+
+# macOS
+**/.DS_Store
+
+# PIP Logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# PyCharm
+**/.idea/
