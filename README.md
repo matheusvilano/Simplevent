@@ -37,6 +37,7 @@ An `StrEvent` is an `Event` that stores the a "callback name" as a `string`. Onc
 `subscribers`, looking for a method name that matches the stored `string`. Here's an example where a video-game Character 
 is supposed to stop moving after a Timer has reached zero, with simplified code:
 
+#### Example
 ```python
 from simplevent import StrEvent
 
@@ -98,6 +99,7 @@ an `StrEvent`- will call its `Subscribers` directly **instead** of looking for a
 Here's the same example as in `StrEvent` - a video-game Character that is supposed to stop moving after a Timer has reached 
 zero - but using `RefEvent` instead, again with simplified code:
 
+#### Example
 ```python
 from simplevent import RefEvent
 
