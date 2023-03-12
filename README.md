@@ -149,3 +149,25 @@ class PlayerCharacter(ControllableGameObject):
     # Other code ...
     # ...
 ```
+
+## Important Notes
+
+### No Reference Management
+
+Simplevent's `Event` instances do not automatically manage references to their `Subscribers`. That means it is up to the 
+developer to manage references. Here are a couple of examples:
+
+#### Null Subscribers
+- `o` (an `object`) becomes a `Subscriber` of `e` (an `Event`).
+- `o` is destroyed via `del` before being unsubscribed from `e`.
+
+The above is a problem because `e` will still attempt to call `o` when invoked, which will result in an `Error` (likely 
+a `TypeError`,`AttributeError`, or similar).
+
+#### Persistent Subscribers
+- `o` (an `object`) becomes a `Subscriber` of `e` (an `Event`).
+- `o` is unreferenced everywhere in code, except in `e` (as a `subscriber`).
+
+`o` exists inside `e` as a reference. Python's garbage collection will **not destroy `o`** until all references to it  
+cease to exist - **including the one inside `e`, which represents `o` as a `Subscriber`**. The developer must be very 
+careful and ensure that `o` is unsubscribed from `e` whenever needed.
