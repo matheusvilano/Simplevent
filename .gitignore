@@ -10,6 +10,7 @@ lib/
 lib64/
 dist/
 var/
+src/Simplevent.egg-info/
 
 # Compiled Objects
 **/*.pyc
