@@ -18,8 +18,8 @@ setuptools.setup(
 		license="MIT",
 		long_description=long_description,
 		long_description_content_type="text/markdown",  # GitHub-flavored Markdown (GFM)
-		name="Simplevent",
-		packages=setuptools.find_packages(where="src"),
+		name="simplevent",
+		packages=setuptools.find_packages("src"),
 		package_dir={"": "src"},
 		project_urls={
 			"Author Website": "https://www.matheusvilano.com/",
