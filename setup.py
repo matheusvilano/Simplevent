@@ -12,7 +12,7 @@ setuptools.setup(
 			"Operating System :: OS Independent",
 			"Programming Language :: Python :: 3",
 		],
-		description="A simple framework for event-driven programming. Loosely based on the Observer design pattern.",
+		description="A simple framework for event-driven programming, based on the Observer design pattern.",
 		install_requires=[],
 		keywords="event observer listener subscription subscriber subject design pattern callback",
 		license="MIT",
