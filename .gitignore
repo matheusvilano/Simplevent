@@ -8,7 +8,7 @@ build/
 dist/
 lib/
 lib64/
-sdist/
+dist/
 var/
 
 # Compiled Objects

@@ -17,7 +17,7 @@ setuptools.setup(
 		keywords="event observer listener subscription subscriber subject design pattern callback",
 		license="MIT",
 		long_description=long_description,
-		long_description_content_type="events",
+		long_description_content_type="GFM",  # GitHub-flavored Markdown
 		name="Simplevent",
 		packages=setuptools.find_packages(where="src"),
 		package_dir={"": "src"},
