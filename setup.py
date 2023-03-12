@@ -1,7 +1,7 @@
 import setuptools
+from pathlib import Path
 
-with open("README.md", "r", encoding="utf-8") as fh:
-	long_description = fh.read()
+long_description = (Path(__file__).parent/"README.md").read_text()
 
 setuptools.setup(
 		author="Matheus Vilano",
@@ -17,7 +17,7 @@ setuptools.setup(
 		keywords="event observer listener subscription subscriber subject design pattern callback",
 		license="MIT",
 		long_description=long_description,
-		long_description_content_type="GFM",  # GitHub-flavored Markdown
+		long_description_content_type="text/markdown",  # GitHub-flavored Markdown (GFM)
 		name="Simplevent",
 		packages=setuptools.find_packages(where="src"),
 		package_dir={"": "src"},
