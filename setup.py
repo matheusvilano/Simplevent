@@ -5,6 +5,7 @@ long_description = (Path(__file__).parent/"README.md").read_text()
 
 setuptools.setup(
 		author="Matheus Vilano",
+		author_email="",
 		classifiers=[
 			"Development Status :: 5 - Production/Stable",
 			"Intended Audience :: Developers",
