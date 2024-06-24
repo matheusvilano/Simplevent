@@ -1,21 +1,19 @@
-import inspect
-from typing import Callable
-from abc import ABC, abstractmethod
-from collections import OrderedDict
+from abc import ABC as _ABC, abstractmethod as _abstractmethod
+from inspect import signature as _signature
+from re import match as _match
+from typing import Callable as _Callable, Type as _Type, Any as _Any
 
 
-class Event(ABC):
+class Event(_ABC):
 
-	@abstractmethod
-	def __init__(self, *, allow_duplicate_subscribers: bool = True):
+	@_abstractmethod
+	def __init__(self):
 		"""
 		Constructs a new Event.
-		:param allow_duplicate_subscribers: Whether to allow duplicate subscribers.
 		"""
 		self._subs: list = []
-		self._allow_duplicate_subs = allow_duplicate_subscribers
 
-	@abstractmethod
+	@_abstractmethod
 	def __call__(self, *args, **kwargs):
 		"""
 		What to do when the Event is invoked.
@@ -39,7 +37,6 @@ class Event(ABC):
 		Sugar syntax for removing subscribers.
 		:param subscriber: The object to unsubscribe to the Event.
 		"""
-		self._validate_subscriber(subscriber)
 		self.remove(subscriber)
 		return self
 
@@ -50,8 +47,8 @@ class Event(ABC):
 		"""
 		return len(self._subs)
 
-	@abstractmethod
-	def _validate_subscriber(self, subscriber):
+	@_abstractmethod
+	def _validate_subscriber(self, subscriber) -> None:
 		"""
 		Validates whether the subscriber is valid.
 		:param subscriber: The subscriber to evaluate.
@@ -59,76 +56,85 @@ class Event(ABC):
 		"""
 		pass
 
-	def invoke(self, *args, **kwargs) -> None | list:
+	def invoke(self, *args) -> None:
 		"""
 		Invokes the event, causing all subscribers to handle (respond to) the event.
-		:param args: Named arguments.
-		:param kwargs: Unnamed arguments.
+		:param args: Positional arguments.
 		:return: No return value, by default.
 		"""
-		return self.__call__(*args, **kwargs)
+		return self.__call__(*args)
 
-	def add(self, subscriber):
+	def add(self, subscriber) -> None:
 		"""
 		Adds a new subscriber.
 		:param subscriber: The new subscriber.
 		"""
 		self._validate_subscriber(subscriber)
-		if not self._allow_duplicate_subs and subscriber in self._subs:
+		if subscriber in self._subs:
 			return
 		self._subs.append(subscriber)
 
-	def insert(self, i: int, subscriber):
+	def insert(self, i: int, subscriber) -> None:
 		"""
 		Inserts a new subscriber (at the specified index).
 		:param i: The index where to insert the new subscriber.
 		:param subscriber: The new subscriber
 		"""
 		self._validate_subscriber(subscriber)
-		if not self._allow_duplicate_subs and subscriber in self._subs:
+		if subscriber in self._subs:
 			return
 		self._subs.insert(i, subscriber)
 
-	def remove(self, subscriber):
+	def remove(self, subscriber) -> None:
 		"""
 		Removes a subscriber.
 		:param subscriber: The subscriber to remove.
 		"""
 		self._subs.remove(subscriber)
 
-	def remove_duplicate_subscribers(self):
-		"""Removes duplicate subscribers from the Event. This method should be avoided, as the time it takes to run scales with the amount of subscribers."""
-		self._subs = list(OrderedDict.fromkeys(self._subs))
-
 
 class StrEvent(Event):
-	"""An event with non-function objects as subscribers, that stores its name as a string. Once invoked, an StrEvent will query its subscribers for a method of the same name as itself; if valid, the method is immediately called."""
+	"""
+	An event with non-function objects as subscribers, that stores its own name as a string. Once invoked, an StrEvent
+	will query its subscribers for a method of the same name as itself; if valid, the method is immediately called.
+	StrEvent does not enforce function signatures, and all arguments (event data) are broadcast via named arguments
+	(**kwargs). It is recommended to document the names of the arguments in a docstring.
+	"""
 
-	def __init__(self, event_name: str, *, allow_duplicate_subscribers: bool = False):
+	_valid_name_regular_expression = r"^[A-Za-z_][A-Za-z0-9_]*$"
+
+	def __init__(self, event_name: str, param_names: tuple[str, ...] = ()):
 		"""
 		Constructs a new StrEvent.
-		:param event_name: The name of the event. This is also the name of the callback function to look for in the event's subscribers.
-		:param allow_duplicate_subscribers: Whether to allow duplicate subscribers.
+		:param event_name: The name of the event. This is also the name of the callback function to look for in the
+		event's subscribers.
+		:param param_names: The parameters of the event. By default, the event has no parameters.
 		"""
-		super().__init__(allow_duplicate_subscribers=allow_duplicate_subscribers)
-		if not isinstance(event_name, str):
+		super().__init__()
+		if not isinstance(event_name, str) or _match(StrEvent._valid_name_regular_expression, event_name) is None:
 			raise InvalidEventNameError
 		self._name = event_name
+		self._param_names = param_names
 
-	def __call__(self, *args, **kwargs) -> None:
+	def __call__(self, *args) -> None:
 		"""
 		Calls every single current subscriber, if valid.
 		:param args: Unnamed arguments.
 		:param kwargs: Named arguments.
 		:return: No return value, by default.
 		"""
+		if len(args) != len(self._param_names):
+			raise EventCallParameterListMismatchError
 		for subscriber in self._subs:
 			if subscriber is not None:
 				function = getattr(subscriber, self._name)
-				if function is not None:
-					function(*args, **kwargs)
+				if function is not None and isinstance(function, _Callable):
+					kwargs = dict()
+					for i, arg in enumerate(args):
+						kwargs[self._param_names[i]] = arg
+					function(**kwargs)
 
-	def _validate_subscriber(self, subscriber):
+	def _validate_subscriber(self, subscriber: _Any):
 		"""
 		Validates whether the subscriber is valid.
 		:param subscriber: The subscriber to evaluate.
@@ -137,81 +143,85 @@ class StrEvent(Event):
 
 	@property
 	def name(self) -> str:
-		"""
-		The name of this event.
-		:return:The name of this event.
-		"""
+		""":return: The name of this event."""
 		return self._name
+
+	@property
+	def param_names(self) -> tuple[str, ...]:
+		""":return: The names of the parameters of this event."""
+		return self._param_names
 
 
 class RefEvent(Event):
-	"""An event with functions (or functors) as subscribers. The expectation is that the subscribed (signed) function will always be called successfully."""
+	"""
+	An event with functions (or functors) as subscribers. The expectation is that the subscribed (signed) function
+	will always be called successfully. RefEvent provides "soft" type-safety.
+	"""
 
-	def __init__(self, *, amount_of_params: int = None, return_from_subscribers: bool = False, allow_duplicate_subscribers: bool = False):
+	def __init__(self, param_types: tuple[_Type, ...] = (), force_subscriber_type_safety: bool = False):
 		"""
 		Constructs a new RefEvent.
-		:param return_from_subscribers: Whether to forward return values from subscribers.
-		:param allow_duplicate_subscribers: Whether to allow duplicate subscribers.
+		:param param_types: The param types of the event. When calling the event, these types must be obeyed, in order.
+		:param force_subscriber_type_safety: Whether to verify the param types of the subscriber. An exception will be
+		raised if the param types are mismatched.
 		"""
-		super().__init__(allow_duplicate_subscribers=allow_duplicate_subscribers)
-		self._len_params: int | None = amount_of_params
-		self._return_from_subs: bool = return_from_subscribers
+		super().__init__()
+		self._param_types = param_types
+		self._force_subscriber_type_safety = force_subscriber_type_safety
 
-	def __call__(self, *args, **kwargs) -> None | list:
+	def __call__(self, *args) -> None:
 		"""
 		Calls every single current subscriber, if valid.
 		:param args: Unnamed arguments.
 		:param kwargs: Named arguments.
 		:return: No return value, by default.
 		"""
-		if self._len_params is not None and self._len_params != len(args):
-			raise IncorrectNumberOfArgsError
-		return_values: list = []
+		if len(args) != len(self._param_types):
+			raise EventCallParameterListMismatchError
+		for i, arg in enumerate(args):
+			if not isinstance(arg, self._param_types[i]):
+				raise EventCallParameterListMismatchError
 		for subscriber in self._subs:
 			if subscriber is not None:
-				return_values.append(subscriber(*args, **kwargs))
-		return return_values if self._return_from_subs else None
+				subscriber(*args)
 
-	def _validate_subscriber(self, subscriber):
+	def _validate_subscriber(self, subscriber: _Callable):
 		"""
 		Validates whether the subscriber is valid.
 		:param subscriber: The subscriber to evaluate.
 		:raise: A BaseEventError, if the subscriber is invalid.
 		"""
-		subscriber_signature = inspect.signature(subscriber)
-		if self._len_params is not None and self._len_params != len(subscriber_signature.parameters):
-			raise IncorrectNumberOfParamsError
-		if not isinstance(subscriber, Callable):
-			raise NotCallableError
+		if not isinstance(subscriber, _Callable):
+			raise SubscriberIsNotCallableError
+		subscriber_signature = _signature(subscriber)
+		if len(subscriber_signature.parameters.values()) != len(self._param_types):
+			raise SubscriberSignatureMismatchError
+		if self._force_subscriber_type_safety:
+			for i, param in enumerate(subscriber_signature.parameters.values()):
+				if param.annotation != self._param_types[i] and param.annotation != param.empty:
+					raise SubscriberSignatureMismatchError
+
+	@property
+	def signature(self) -> tuple[_Type, ...]:
+		""":return: The signature of the event. When calling the event, this signature must be obeyed."""
+		return self._param_types
 
 
-class BaseEventError(BaseException):
-	...
+class _BaseEventError(BaseException):
+	"""The base class for all errors in Simplevent."""
 
 
-class EventSubscriptionError(BaseEventError):
-	...
+class InvalidEventNameError(_BaseEventError):
+	"""Raised when an invalid event name is specified. Examples: value is not a string; value is an empty string."""
 
 
-class InvalidEventNameError(BaseEventError):
-	...
+class SubscriberSignatureMismatchError(_BaseEventError):
+	"""Happens when a new subscriber's signature does not match the event's signature."""
 
 
-class EventInvocationError(BaseEventError):
-	...
+class EventCallParameterListMismatchError(_BaseEventError):
+	"""Raised when an invalid number of parameters is specified when an event is called."""
 
 
-class IncorrectNumberOfArgsError(EventInvocationError):
-	...
-
-
-class IncorrectNumberOfParamsError(EventSubscriptionError):
-	...
-
-
-class WrongCallableSignatureError(EventSubscriptionError):
-	...
-
-
-class NotCallableError(EventSubscriptionError):
-	...
+class SubscriberIsNotCallableError(_BaseEventError):
+	"""Raised when a new subscriber is not Callable."""

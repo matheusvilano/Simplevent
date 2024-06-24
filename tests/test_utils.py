@@ -3,34 +3,34 @@ def get_veggies():
 
 
 def get_protein():
-	return "Protein!"
+	print("Protein!")
 
 
 def get_dessert():
-	return "Dessert!"
+	print("Dessert!")
 
 
 def get_rice():
-	return "Rice!"
+	print("Rice!")
 
 
 def get_food(food_name: str):
-	return f"{food_name}!"
+	print(f"{food_name}!")
 
 
 class TestClassA(object):
-
+	
 	def __init__(self):
 		self.response: str | None = None
-
-	def test_event_invoked(self):
-		self.response = "A"
+	
+	def test_event_invoked(self, **kwargs):
+		self.response = "A" if kwargs["response"] is None else kwargs["response"]
 
 
 class TestClassB(object):
-
+	
 	def __init__(self):
 		self.response: str | None = None
-
-	def test_event_invoked(self):
-		self.response = "B"
+	
+	def test_event_invoked(self, **kwargs):
+		self.response = "B" if kwargs["response"] is None else kwargs["response"]
