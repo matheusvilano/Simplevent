@@ -162,13 +162,13 @@ class PlayerCharacter(ControllableGameObject):
     # ...
 ```
 
-For events that broadcast data (information about the event), `RefEvent` supports **signed parameters**, with an 
-optional flag for enforcing type-safety (via type hints, which are fetched at runtime via the `inspect` built-in 
-module). Here is a small snippet:
+For events that broadcast data (information about the event), `RefEvent` supports type-safe **signed parameters**. Type 
+safety is ensured via type hints, which are fetched at runtime via the `inspect` built-in module. Here is a small 
+snippet:
 
 ```python
 from simplevent import RefEvent
-energy_restored = RefEvent((float,), force_subscriber_type_safety=False)
+energy_restored = RefEvent(float)
 # some subscriptions would happen here ...
 energy_restored(25.4)  # The event will call all subscribers and pass 25.4 (the amount of energy restored) via *args.
 ```
