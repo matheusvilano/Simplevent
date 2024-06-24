@@ -8,7 +8,6 @@ build/
 dist/
 lib/
 lib64/
-dist/
 var/
 src/Simplevent.egg-info/
 

@@ -2,17 +2,18 @@
 
 ## Summary
 
-Simplevent is a simple Event framework for Python, loosely based on the Observer design pattern. The package is minimal:
-it defines the `Event` base class and the `SignedEvent` and `NamedEvent` subclasses. An instance of either encapsulates
+Simplevent is a simple Event framework for Python, based on the Observer design pattern. The package is minimal: it 
+defines the `Event` base class and the `SignedEvent` and `NamedEvent` subclasses. An instance of either encapsulates
 a `list` but **will also itself behave somewhat like a `list`**; this is essentially an _indirection_.
 
 ## Observer Pattern
 
-Simplevent's tiny framework can be seen as a variation on the [Observer Pattern](https://en.wikipedia.org/wiki/Observer_pattern):
+Simplevent's minimalist framework can be seen as a variation on the [Observer Pattern](https://en.wikipedia.org/wiki/Observer_pattern):
 
 - When you instantiate an `Event`, that instance's context (scope) is the `subject`.
 - When you subscribe an object to an `Event`, that object is an `observer`.
-- When you `invoke` an `Event` instance, you're notifying all `observers` that the `subject` has executed an important action.
+- When you `invoke` an `Event` instance, you're notifying all `observers` that the `subject` has executed an important 
+action.
 
 ## Motivation
 
@@ -25,9 +26,9 @@ can be time-consuming. This package provides an easy, small-scale solution for e
 There are two types of `Event` in Simplevent: `StrEvent` and `RefEvent`. Both share a few similarities:
 
 - Subscribers are encapsulated in a `list`, which is encapsulated by the `Event`.
-- Subscribing the same object twice is not allowed by default (but this can be changed).
+- Subscribing the same object twice is not allowed. In other words, duplicates are not supported.
 - Some sugar syntax is available: `+=` (subscribe), `-=` (unsubscribe), and `()` (invoke).
-- Some magic method compatibility is available: `len` (currently the only one).
+- Some magic method compatibility is available; e.g. `len`.
 
 Each type can be customized/configured via their respective constructor. Refer to `docstrings` for more information.
 
@@ -36,8 +37,8 @@ Each type can be customized/configured via their respective constructor. Refer t
 An `StrEvent` is an `Event` that stores a "callback name" as a `string`. Once invoked, it will go through all of its 
 `subscribers`, looking for a method name that matches the stored `string`. 
 
-Here's an example where a video-game Character 
-is supposed to stop moving after a Timer has reached zero, with simplified code:
+Here's an example where a video-game Character is supposed to stop moving after a Timer has reached zero, with 
+simplified code:
 
 #### Example
 ```python
@@ -92,14 +93,25 @@ class PlayerCharacter(ControllableGameObject):
     # ...
 ```
 
+For events that broadcast data (information about the event), `StrEvent` supports **named parameters**. Here is a small 
+snippet:
+
+```python
+from simplevent import StrEvent
+energy_restored = StrEvent("on_energy_restored", ("amount_restored",))
+# some subscriptions would happen here ...
+energy_restored(25.4)  # The event will call on_energy_restored on all subscribers and pass {"amount_restored": 25.4} via **kwargs.
+```
+
 ### Ref Event
 
-`Subscribers` of a `RefEvent` **must be `Callable` objects**. In other words, the `Subscriber` has to be a `function`, a `method`, 
-or a "functor-like" `object` (an `object` with the`__call__`magic method overloaded). That's because a `RefEvent` - unlike 
-an `StrEvent`- will call its `Subscribers` directly **instead** of looking for a `method` of a certain name.
+`Subscribers` of a `RefEvent` **must be `Callable` objects**. In other words, the `Subscriber` has to be a `function`, 
+a `method`, or a "functor-like" `object` (an `object` with the`__call__`magic method overloaded). That's because a 
+`RefEvent` - unlike an `StrEvent`- will call its `Subscribers` directly **instead** of looking for a `method` of a 
+certain name.
 
-Here's the same example as in `StrEvent` - a video-game Character that is supposed to stop moving after a Timer has reached 
-zero - but using `RefEvent` instead, again with simplified code:
+Here's the same example as in `StrEvent` - a video-game Character that is supposed to stop moving after a Timer has 
+reached zero - but using `RefEvent` instead, again with simplified code:
 
 #### Example
 ```python
@@ -149,6 +161,20 @@ class PlayerCharacter(ControllableGameObject):
     # Other code ...
     # ...
 ```
+
+For events that broadcast data (information about the event), `RefEvent` supports **signed parameters**, with an 
+optional flag for enforcing type-safety (via type hints, which are fetched at runtime via the `inspect` built-in 
+module). Here is a small snippet:
+
+```python
+from simplevent import RefEvent
+energy_restored = RefEvent((float,), force_subscriber_type_safety=False)
+# some subscriptions would happen here ...
+energy_restored(25.4)  # The event will call all subscribers and pass 25.4 (the amount of energy restored) via *args.
+```
+
+When defining events using `RefEvents` with parameters, make sure to document them, preferably with docstrings. This 
+will ensure clarity and readability, specially with a long parameter list.
 
 ## Important Notes
 
