@@ -1,6 +1,6 @@
 import unittest
 from src import simplevent
-from test_utils import get_food, get_rice, get_protein, get_veggies, get_dessert, TestClassA, TestClassB
+from test_utils import *
 
 
 class TestSimplevent(unittest.TestCase):
@@ -11,7 +11,7 @@ class TestSimplevent(unittest.TestCase):
 	test_obj_b2 = TestClassB()
 
 	def test__ref_event_invocation(self):
-		test_event: simplevent.RefEvent = simplevent.RefEvent()
+		test_event = simplevent.RefEvent()
 		test_event.add(get_rice)
 		test_event.add(get_protein)
 		test_event += get_veggies
@@ -23,12 +23,15 @@ class TestSimplevent(unittest.TestCase):
 		self.assertEqual(len(test_event), 2)
 
 	def test__ref_event_param_list(self):
-		test_event: simplevent.RefEvent = simplevent.RefEvent(param_types=(str,))
+		test_event = simplevent.RefEvent(str)
 		test_event += get_food
-		test_event("Sweets")
-		self.assertEqual(len(test_event), 1)
+		test_event += get_food_no_type
+		test_event += get_food_any_type
+		test_event += get_food_sub_type
+		test_event(ExtendedStr("Sweets"))  # subclass is ok
+		self.assertEqual(len(test_event), 4)
 		test_event -= get_food
-		self.assertEqual(len(test_event), 0)
+		self.assertEqual(len(test_event), 3)
 
 	def test__str_event_invocation(self):
 		test_event = simplevent.StrEvent("test_event_invoked", ("response",))

@@ -158,7 +158,7 @@ class RefEvent(Event):
 	will always be called successfully. RefEvent provides "soft" type-safety.
 	"""
 
-	def __init__(self, param_types: tuple[_Type, ...] = (), force_subscriber_type_safety: bool = False):
+	def __init__(self, *types: type):
 		"""
 		Constructs a new RefEvent.
 		:param param_types: The param types of the event. When calling the event, these types must be obeyed, in order.
@@ -166,8 +166,7 @@ class RefEvent(Event):
 		raised if the param types are mismatched.
 		"""
 		super().__init__()
-		self._param_types = param_types
-		self._force_subscriber_type_safety = force_subscriber_type_safety
+		self._param_types = types
 
 	def __call__(self, *args) -> None:
 		"""
@@ -196,10 +195,9 @@ class RefEvent(Event):
 		subscriber_signature = _signature(subscriber)
 		if len(subscriber_signature.parameters.values()) != len(self._param_types):
 			raise SubscriberSignatureMismatchError
-		if self._force_subscriber_type_safety:
-			for i, param in enumerate(subscriber_signature.parameters.values()):
-				if param.annotation != self._param_types[i] and param.annotation != param.empty:
-					raise SubscriberSignatureMismatchError
+		for i, param in enumerate(subscriber_signature.parameters.values()):
+			if param.annotation != self._param_types[i] and not issubclass(param.annotation, self._param_types[i]) and param.annotation != param.empty and param.annotation != _Any:
+				raise SubscriberSignatureMismatchError
 
 	@property
 	def signature(self) -> tuple[_Type, ...]:
