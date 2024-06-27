@@ -98,9 +98,10 @@ snippet:
 
 ```python
 from simplevent import StrEvent
-energy_restored = StrEvent("on_energy_restored", ("amount_restored",))
+energy_restored = StrEvent("on_energy_restored", "amount_restored")
 # some subscriptions would happen here ...
-energy_restored(25.4)  # The event will call on_energy_restored on all subscribers and pass {"amount_restored": 25.4} via **kwargs.
+# the expected signature is func(amount_restored: float) for direct access or func(**kwargs) for dictionary access
+energy_restored(25.4)  # The event will call on_energy_restored on all subscribers and pass 25.4 or {"amount_restored": 25.4}
 ```
 
 ### Ref Event
