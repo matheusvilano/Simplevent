@@ -1,7 +1,7 @@
 from abc import ABC as _ABC, abstractmethod as _abstractmethod
-from inspect import signature as _signature
+from inspect import signature as _signature, Parameter as _Parameter
 from re import match as _match
-from typing import Callable as _Callable, Any as _Any, Type as _Type
+from typing import Callable as _Callable, Any as _Any, Type as _Type, Tuple as _Tuple, List as _List
 
 
 class Event(_ABC):
@@ -12,24 +12,21 @@ class Event(_ABC):
 		Constructs a new Event.
 		"""
 		super().__init__()
-		self._subs: list = []
+		self._subs = []
 	
-	@_abstractmethod
 	def __call__(self, *args, **kwargs):
 		"""
 		What to do when the Event is invoked.
-		:param args: Unnamed arguments.
-		:param kwargs: Named arguments.
+		:param args: Positional arguments.
 		:return: No return value, by default.
 		"""
-		pass
+		return self.invoke(*args)
 	
 	def __add__(self, subscriber):
 		"""
 		Sugar syntax for adding subscribers.
 		:param subscriber: The object to subscribe to the Event.
 		"""
-		self._validate_subscriber(subscriber)
 		self.add(subscriber)
 		return self
 	
@@ -56,14 +53,15 @@ class Event(_ABC):
 		:raise: A BaseEventError, if the subscriber is invalid.
 		"""
 		pass
-	
+
+	@_abstractmethod
 	def invoke(self, *args) -> None:
 		"""
 		Invokes the event, causing all subscribers to handle (respond to) the event.
 		:param args: Positional arguments.
 		:return: No return value, by default.
 		"""
-		return self.__call__(*args)
+		pass
 	
 	def add(self, subscriber) -> None:
 		"""
@@ -113,19 +111,17 @@ class StrEvent(Event):
 		"""
 		super().__init__()
 		if not isinstance(callback, str) or _match(StrEvent._valid_name_regular_expression, callback) is None:
-			raise InvalidEventNameError
+			raise CallbackNameError("Provided callback name is invalid. Must be a valid function name.")
 		self._callback = callback
 		self._params = params
 	
-	def __call__(self, *args) -> None:
+	def invoke(self, *args) -> None:
 		"""
-		Calls every single current subscriber, if valid.
+		Calls every single current subscriber's callback function, if valid.
 		:param args: Unnamed arguments.
-		:param kwargs: Named arguments.
-		:return: No return value, by default.
 		"""
 		if len(args) != len(self._params):
-			raise EventCallParameterListMismatchError
+			raise ArgumentCountError
 		for subscriber in self._subs:
 			if subscriber is not None:
 				function = getattr(subscriber, self._callback)
@@ -169,32 +165,32 @@ class RefEvent(Event):
 		raised if the param types are mismatched.
 		"""
 		super().__init__()
-		self._param_types = types
+		self._types = types
 	
-	def __call__(self, *args) -> None:
+	def invoke(self, *args) -> None:
 		"""
 		Calls every single current subscriber, if valid.
-		:param args: Unnamed arguments.
-		:param kwargs: Named arguments.
-		:return: No return value, by default.
+		:param args: Arguments.
 		"""
 		
 		# Amount of parameters
-		if len(args) > len(self._param_types):
-			raise EventCallParameterListMismatchError(f"Too many params in {self.__class__} call. "
-			                                          f"Expected {len(self._param_types)} arguments, "
-			                                          f"but {len(args)} were given.")
-		elif len(args) < len(self._param_types):
-			raise EventCallParameterListMismatchError(f"Too few params in {self.__class__} call. "
-			                                          f"Expected {len(self._param_types)} arguments, "
-			                                          f"but {len(args)} were given.")
+		if len(args) > len(self._types):
+			raise ArgumentCountError(f"Too many params in {self.__class__} call. "
+			                         f"Expected {len(self._types)} arguments, "
+			                         f"but {len(args)} were given.")
+		elif len(args) < len(self._types):
+			raise ArgumentCountError(f"Too few params in {self.__class__} call. "
+			                         f"Expected {len(self._types)} arguments, "
+			                         f"but {len(args)} were given.")
 		
 		# Expected types ("soft" checks)
 		for i, arg in enumerate(args):
-			origin_class = getattr(self._param_types[i], "__origin__", None)
-			if not isinstance(arg, self._param_types[i] if origin_class is None else origin_class):
-				raise EventCallParameterListMismatchError(f"An argument has the wrong data type: "
-				                                          f"{type(arg)}, but {type(arg)} was expected.")
+			if self._types[i] == _Any:  # Any cannot be used with isinstance
+				continue
+			origin_class = getattr(self._types[i], "__origin__", None)
+			if not isinstance(arg, self._types[i] if origin_class is None else origin_class):
+				raise ArgumentCountError(f"An argument has the wrong data type: "
+				                         f"{type(arg)}, but {type(arg)} was expected.")
 		
 		# Null checks (null subscribers are NOT removed)
 		for subscriber in self._subs:
@@ -210,46 +206,52 @@ class RefEvent(Event):
 		
 		# Callable check
 		if not isinstance(subscriber, _Callable):
-			raise SubscriberIsNotCallableError("New subscriber is not a callable.")
+			raise NotCallableError("New subscriber is not a callable.")
+		
+		signature = _signature(subscriber)
+		
+		# Block *args and **kwargs
+		for param in signature.parameters.values():
+			if param.kind == _Parameter.VAR_POSITIONAL:
+				raise SignatureMismatchError("New subscriber's param list contains *args. "
+				                             "Positional vars are not supported.")
+			if param.kind == _Parameter.VAR_KEYWORD:
+				raise SignatureMismatchError("New subscriber's param list contains *kwargs. "
+				                             "Keyword vars are not supported.")
 		
 		# Amount of params
-		subscriber_signature = _signature(subscriber)
-		if len(subscriber_signature.parameters.values()) > len(self._param_types):
-			raise SubscriberSignatureMismatchError("New subscriber has too many params. "
-			                                       f"Event expected {len(self._param_types)} params.")
-		elif len(subscriber_signature.parameters.values()) < len(self._param_types):
-			raise SubscriberSignatureMismatchError("New subscriber has too few params. "
-			                                       f"Event expected {len(self._param_types)} params.")
+		if len(signature.parameters.values()) > len(self._types):
+			raise SignatureMismatchError("New subscriber has too many params. "
+			                             f"Event expected {len(self._types)} params.")
+		elif len(signature.parameters.values()) < len(self._types):
+			raise SignatureMismatchError("New subscriber has too few params. "
+			                             f"Event expected {len(self._types)} params.")
 		
 		# Type checks
-		for i, param in enumerate(subscriber_signature.parameters.values()):
-			is_type_same = param.annotation == self._param_types[i]
-			is_type_any = param.annotation == param.empty and param.annotation == _Any
+		for i, param in enumerate(signature.parameters.values()):
+			is_type_same = param.annotation == self._types[i]
+			is_type_any = param.annotation == param.empty or param.annotation == _Any
 			if not is_type_same and not is_type_any:
-				raise SubscriberSignatureMismatchError("A type from 'subscriber' does not match a type from 'event'. "
-				                                       f"Got {param.annotation} instead of {self._param_types[i]}.")
+				raise SignatureMismatchError("A type from 'subscriber' does not match a type from 'event'. "
+				                             f"Got {param.annotation} instead of {self._types[i]}.")
 	
 	@property
-	def signature(self) -> tuple[_Type, ...]:
+	def signature(self) -> _Tuple[_Type, ...]:
 		""":return: The signature of the event. When calling the event, this signature must be obeyed."""
-		return self._param_types
+		return self._types
 
 
-class _BaseEventError(BaseException):
-	"""The base class for all errors in Simplevent."""
+class CallbackNameError(ValueError):
+	"""Raised when an invalid callback name is specified."""
 
 
-class InvalidEventNameError(_BaseEventError):
-	"""Raised when an invalid event name is specified. Examples: value is not a string; value is an empty string."""
+class NotCallableError(ValueError):
+	"""Raised when a new subscriber is not Callable."""
 
 
-class SubscriberSignatureMismatchError(_BaseEventError):
+class SignatureMismatchError(RuntimeError):
 	"""Happens when a new subscriber's signature does not match the event's signature."""
 
 
-class EventCallParameterListMismatchError(_BaseEventError):
-	"""Raised when an invalid number of parameters is specified when an event is called."""
-
-
-class SubscriberIsNotCallableError(_BaseEventError):
-	"""Raised when a new subscriber is not Callable."""
+class ArgumentCountError(RuntimeError):
+	"""Raised when an invalid number of arguments is specified during an event invocation (call)."""

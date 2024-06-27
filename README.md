@@ -3,7 +3,7 @@
 ## Summary
 
 Simplevent is a simple Event framework for Python, based on the Observer design pattern. The package is minimal: it 
-defines the `Event` base class and the `SignedEvent` and `NamedEvent` subclasses. An instance of either encapsulates
+defines the `Event` base class and the `StrEvent` and `RefEvent` subclasses. An instance of either encapsulates
 a `list` but **will also itself behave somewhat like a `list`**; this is essentially an _indirection_.
 
 ## Observer Pattern
@@ -30,14 +30,14 @@ There are two types of `Event` in Simplevent: `StrEvent` and `RefEvent`. Both sh
 - Some sugar syntax is available: `+=` (subscribe), `-=` (unsubscribe), and `()` (invoke).
 - Some magic method compatibility is available; e.g. `len`.
 
-Each type can be customized/configured via their respective constructor. Refer to `docstrings` for more information.
+Each type can be customized/configured via their respective constructor. Refer to _docstrings_ for more information.
 
 ### Str Event
 
-An `StrEvent` is an `Event` that stores a "callback name" as a `string`. Once invoked, it will go through all of its 
-`subscribers`, looking for a method name that matches the stored `string`. 
+A `StrEvent` is an `Event` that stores a "callback name" as a `str`. Once invoked, it will go through all of its 
+`subscribers`, looking for a method name that matches the stored `str`. 
 
-Here's an example where a video-game Character is supposed to stop moving after a Timer has reached zero, with 
+Here's an example where a video-game character is supposed to stop moving after a `Timer` has reached zero, with 
 simplified code:
 
 #### Example
@@ -67,7 +67,7 @@ class Timer:
         self._time_left -= 1
         if self._time_left <= 0:
             self.stop_timer()
-            self.time_is_up()  # Sugar syntax; same as `self._time_is_up.invoke()`
+            self.time_is_up()  # Sugar syntax; same as `self.time_is_up.invoke()`
 
 class PlayerCharacter(ControllableGameObject):
     
@@ -101,7 +101,7 @@ from simplevent import StrEvent
 energy_restored = StrEvent("on_energy_restored", "amount_restored")
 # some subscriptions would happen here ...
 # the expected signature is func(amount_restored: float) for direct access or func(**kwargs) for dictionary access
-energy_restored(25.4)  # The event will call on_energy_restored on all subscribers and pass 25.4 or {"amount_restored": 25.4}
+energy_restored(25.4)  # the event will call on_energy_restored on all subscribers and pass 25.4 or {"amount_restored": 25.4}
 ```
 
 ### Ref Event
@@ -171,7 +171,7 @@ snippet:
 from simplevent import RefEvent
 energy_restored = RefEvent(float)
 # some subscriptions would happen here ...
-energy_restored(25.4)  # The event will call all subscribers and pass 25.4 (the amount of energy restored) via *args.
+energy_restored(25.4)  # the event will call all subscribers and pass 25.4 (the amount of energy restored)
 ```
 
 When defining events using `RefEvents` with parameters, make sure to document them, preferably with docstrings. This 
