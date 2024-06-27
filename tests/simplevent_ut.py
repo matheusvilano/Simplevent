@@ -1,5 +1,5 @@
 import unittest
-from src.simplevent.simplevent import *
+from src.simplevent import *
 from typing import Any
 
 
@@ -20,7 +20,7 @@ class TestClass:
 	def on_event_ref_args(self, *args):  # should cause an error to be raised
 		self.value = args[0]
 	
-	def on_event_ref_kwargs(self, **kwargs):  # shoudl cause an error to be raised
+	def on_event_ref_kwargs(self, **kwargs):  # should cause an error to be raised
 		self.value = kwargs["data"]
 	
 	@property

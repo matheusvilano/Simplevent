@@ -28,5 +28,5 @@ setuptools.setup(
 		},
 		python_requires=">=3.6",
 		url="https://github.com/matheusvilano/simplevent.git",
-		version="2.1.2",
+		version="2.1.3",
 )
