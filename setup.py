@@ -1,3 +1,6 @@
+# Copyright 2023 Matheus Vilano
+# MIT License
+
 import setuptools
 from pathlib import Path
 
@@ -26,7 +29,7 @@ setuptools.setup(
 			"Author Website": "https://www.matheusvilano.com/",
 			"Git Repository": "https://github.com/matheusvilano/simplevent",
 		},
-		python_requires=">=3.6",
+		python_requires=">=3.11",
 		url="https://github.com/matheusvilano/simplevent.git",
-		version="2.1.3",
+		version="2.2.0",
 )
